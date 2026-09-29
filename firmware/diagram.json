@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "author": "CareMed Smart Cabinet",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-lcd2004", "id": "lcd", "top": -240, "left": -80, "attrs": { "pins": "i2c" } },
+    { "type": "wokwi-servo", "id": "servoTop", "top": -140, "left": 280, "attrs": {} },
+    { "type": "wokwi-servo", "id": "servoBottom", "top": 30, "left": 280, "attrs": {} },
+    { "type": "wokwi-buzzer", "id": "buzzer", "top": -120, "left": 150, "attrs": {} },
+    
+    { "type": "wokwi-pushbutton", "id": "btnSlot1", "top": 180, "left": -260, "attrs": { "color": "green", "label": "Top-1" } },
+    { "type": "wokwi-pushbutton", "id": "btnSlot2", "top": 180, "left": -180, "attrs": { "color": "green", "label": "Top-2" } },
+    { "type": "wokwi-pushbutton", "id": "btnSlot3", "top": 180, "left": -100, "attrs": { "color": "green", "label": "Top-3" } },
+    { "type": "wokwi-pushbutton", "id": "btnSlot4", "top": 180, "left": -20, "attrs": { "color": "green", "label": "Top-4" } },
+
+    { "type": "wokwi-pushbutton", "id": "btnSlot5", "top": 280, "left": -260, "attrs": { "color": "blue", "label": "Btm-1" } },
+    { "type": "wokwi-pushbutton", "id": "btnSlot6", "top": 280, "left": -180, "attrs": { "color": "blue", "label": "Btm-2" } },
+    { "type": "wokwi-pushbutton", "id": "btnSlot7", "top": 280, "left": -100, "attrs": { "color": "blue", "label": "Btm-3" } },
+    { "type": "wokwi-pushbutton", "id": "btnSlot8", "top": 280, "left": -20, "attrs": { "color": "blue", "label": "Btm-4" } },
+
+    { "type": "wokwi-led", "id": "ledTop", "top": -180, "left": 300, "attrs": { "color": "green", "label": "Top Shelf LED" } },
+    { "type": "wokwi-led", "id": "ledBottom", "top": -10, "left": 300, "attrs": { "color": "green", "label": "Bottom Shelf LED" } }
+  ],
+  "connections": [
+    [ "esp:GND.1", "lcd:GND", "black", [ "v0" ] ],
+    [ "esp:5V", "lcd:VCC", "red", [ "v0" ] ],
+    [ "esp:21", "lcd:SDA", "blue", [ "v0" ] ],
+    [ "esp:22", "lcd:SCL", "yellow", [ "v0" ] ],
+
+    [ "esp:18", "servoTop:PWM", "orange", [ "v0" ] ],
+    [ "esp:5V", "servoTop:V+", "red", [ "v0" ] ],
+    [ "esp:GND.1", "servoTop:GND", "black", [ "v0" ] ],
+
+    [ "esp:19", "servoBottom:PWM", "orange", [ "v0" ] ],
+    [ "esp:5V", "servoBottom:V+", "red", [ "v0" ] ],
+    [ "esp:GND.1", "servoBottom:GND", "black", [ "v0" ] ],
+
+    [ "esp:4", "buzzer:2", "purple", [ "v0" ] ],
+    [ "esp:GND.1", "buzzer:1", "black", [ "v0" ] ],
+
+    [ "esp:16", "ledTop:A", "green", [ "v0" ] ],
+    [ "esp:GND.1", "ledTop:C", "black", [ "v0" ] ],
+    [ "esp:17", "ledBottom:A", "green", [ "v0" ] ],
+    [ "esp:GND.1", "ledBottom:C", "black", [ "v0" ] ],
+
+    [ "esp:32", "btnSlot1:2.1", "green", [ "v0" ] ],
+    [ "esp:GND.2", "btnSlot1:1.1", "black", [ "v0" ] ],
+    [ "esp:33", "btnSlot2:2.1", "green", [ "v0" ] ],
+    [ "esp:GND.2", "btnSlot2:1.1", "black", [ "v0" ] ],
+    [ "esp:25", "btnSlot3:2.1", "green", [ "v0" ] ],
+    [ "esp:GND.2", "btnSlot3:1.1", "black", [ "v0" ] ],
+    [ "esp:26", "btnSlot4:2.1", "green", [ "v0" ] ],
+    [ "esp:GND.2", "btnSlot4:1.1", "black", [ "v0" ] ],
+
+    [ "esp:27", "btnSlot5:2.1", "blue", [ "v0" ] ],
+    [ "esp:GND.2", "btnSlot5:1.1", "black", [ "v0" ] ],
+    [ "esp:14", "btnSlot6:2.1", "blue", [ "v0" ] ],
+    [ "esp:GND.2", "btnSlot6:1.1", "black", [ "v0" ] ],
+    [ "esp:12", "btnSlot7:2.1", "blue", [ "v0" ] ],
+    [ "esp:GND.2", "btnSlot7:1.1", "black", [ "v0" ] ],
+    [ "esp:13", "btnSlot8:2.1", "blue", [ "v0" ] ],
+    [ "esp:GND.2", "btnSlot8:1.1", "black", [ "v0" ] ]
+  ],
+  "dependencies": {}
+}

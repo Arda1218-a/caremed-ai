@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareMed AI - Akıllı Yaşlı Sağlık & Eczane Ekosistemi</title>
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js for Refakatçi Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="senior-mode light-theme">
+
+  <!-- Header / Navigation Bar -->
+  <header class="app-header">
+    <div class="logo-container">
+      <div class="logo-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+      <div class="logo-text">
+        <span class="brand-name">CareMed <span class="badge-ai">AI + ESP32</span></span>
+        <span class="brand-sub" data-i18n="brandSub">Akıllı Yaşlı İlaç & Eczane Ekosistemi</span>
+      </div>
+    </div>
+
+    <!-- Live Clock & Weather Widget in Header -->
+    <div class="header-widget-box">
+      <div class="live-clock" id="liveClockDisplay">
+        <i class="fa-regular fa-clock"></i> <span id="clockTimeStr">17:19:00</span>
+      </div>
+      <div class="live-weather" id="liveWeatherWidget" title="Şehir Hava Durumu">
+        <i class="fa-solid fa-sun weather-icon"></i> <span id="weatherTextStr">İstanbul: 28°C Güneşli</span>
+      </div>
+    </div>
+
+    <!-- Language Switcher TR / EN -->
+    <div class="lang-switcher">
+      <button id="langTrBtn" class="lang-btn active" onclick="switchLanguage('tr')">🇹🇷 TR</button>
+      <button id="langEnBtn" class="lang-btn" onclick="switchLanguage('en')">🇬🇧 EN</button>
+    </div>
+
+    <!-- Dark / Light Theme Toggle -->
+    <button id="themeToggleBtn" class="btn-theme" onclick="toggleDarkLightTheme()" title="Karanlık / Aydınlık Mod">
+      <i class="fa-solid fa-moon" id="themeIcon"></i>
+    </button>
+
+    <!-- Patient Selector Dropdown -->
+    <div class="patient-selector" id="patientSelectorContainer">
+      <span class="patient-label" data-i18n="activePatientLabel"><i class="fa-solid fa-users"></i> Aktif Hasta:</span>
+      <select id="patientSelectDropdown" class="patient-dropdown" onchange="handlePatientSelectChange(this.value)">
+        <!-- Dynamic JS Options -->
+      </select>
+    </div>
+
+    <!-- Header Controls & Settings -->
+    <div class="header-controls">
+      <!-- Mute Sound Button -->
+      <button id="muteAudioBtn" class="btn-mute" onclick="toggleAudioMute()" title="Sesi Aç/Kapat">
+        <i class="fa-solid fa-volume-high" id="muteIcon"></i>
+      </button>
+
+      <!-- Voice Assistant Button -->
+      <button id="voiceAssistBtn" class="btn-voice" onclick="toggleVoiceAssist()" title="Sesli Asistan (Mikrofon)">
+        <i class="fa-solid fa-microphone"></i>
+        <span class="voice-text" data-i18n="voiceBtnText">Sesli Asistan</span>
+      </button>
+
+      <!-- Auth Login / E-Devlet Button -->
+      <button class="btn-auth-trigger" onclick="openAuthModal('login')" title="Oturum Aç / E-Devlet">
+        <i class="fa-solid fa-shield-halved"></i> <span id="userAuthBadgeText" data-i18n="loginBtnText">Giriş Yap / E-Devlet</span>
+      </button>
+
+      <!-- Settings Button -->
+      <button id="settingsBtn" class="btn-settings" onclick="openSettingsModal('profiles')" title="Ayarlar">
+        <i class="fa-solid fa-gear"></i> <span data-i18n="settingsBtnText">Ayarlar</span>
+      </button>
+
+      <div class="mode-toggle">
+        <button id="seniorModeBtn" class="mode-btn active" onclick="switchViewMode('senior')">
+          <i class="fa-solid fa-person-cane"></i> <span data-i18n="seniorModeBtn">Yaşlı Modu</span>
+        </button>
+        <button id="familyModeBtn" class="mode-btn" onclick="switchViewMode('family')">
+          <i class="fa-solid fa-user-nurse"></i> <span data-i18n="familyModeBtn">Refakatçi Paneli</span>
+        </button>
+      </div>
+
+      <button class="btn-sos" onclick="triggerSOS()">
+        <i class="fa-solid fa-truck-medical"></i> SOS ACİL
+      </button>
+    </div>
+  </header>
+
+  <!-- Voice First Command Feedback Overlay Bar -->
+  <div id="voiceFeedbackBar" class="voice-feedback-bar hidden">
+    <i class="fa-solid fa-microphone-lines pulse-icon"></i>
+    <span id="voiceRecognizedText" data-i18n="voiceListeningPrompt">Sizi dinliyorum... "İlacımı içtim", "Eczane bul", "Profil değiştir" diyebilirsiniz.</span>
+  </div>
+
+  <main class="main-container">
+
+    <!-- ==================== YAŞLI KULLANICI MODU ==================== -->
+    <section id="seniorView" class="view-section active">
+
+      <!-- Today's Greeting & Active Patient Info -->
+      <div class="welcome-card">
+        <div class="welcome-info">
+          <h2 id="welcomeHeading"><i class="fa-regular fa-sun"></i> Günaydın!</h2>
+          <p id="todayDateStr">Bugün: 13 Ağustos 2026 | Aktif Profil: <strong id="activePatientNameStr">Yükleniyor...</strong></p>
+        </div>
+        <div class="welcome-actions">
+          <button class="btn-vitals-log" onclick="openVitalsModal()"><i class="fa-solid fa-heart-pulse"></i> <span data-i18n="vitalsBtnText">Tansiyon / Şeker Ölçümü Ekle</span></button>
+          <div class="status-summary" id="overallAdherenceStatus">
+            <span class="status-pill status-good"><i class="fa-solid fa-circle-check"></i> Bugünkü Dozlar Zamanında</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Grid: High Contrast & Big Buttons -->
+      <div class="quick-actions-bar">
+        <button class="action-card scan-card" onclick="openESP32Modal('ocr')">
+          <div class="action-icon"><i class="fa-solid fa-camera-retro"></i></div>
+          <div class="action-details">
+            <h3 data-i18n="actionScanTitle">ESP32 İlaç Kutusu Tara</h3>
+            <p data-i18n="actionScanSub">Kutuyu kameraya göster, reçeteyi otomatik eklesin!</p>
+          </div>
+        </button>
+
+        <button class="action-card verify-card" onclick="openESP32Modal('pill')">
+          <div class="action-icon icon-purple"><i class="fa-solid fa-eye"></i></div>
+          <div class="action-details">
+            <h3 data-i18n="actionVerifyTitle">Hap Rengi & Şekli Doğrula</h3>
+            <p data-i18n="actionVerifySub">Avucundaki hapı göster, yanlış ilaç içmeyi önlesin!</p>
+          </div>
+        </button>
+
+        <button class="action-card pharmacy-card" onclick="scrollToPharmacies()">
+          <div class="action-icon"><i class="fa-solid fa-prescription-bottle-medical"></i></div>
+          <div class="action-details">
+            <h3 data-i18n="actionPharmTitle">Eczane & Nöbetçi Bul</h3>
+            <p data-i18n="actionPharmSub">Biten ilaçlar için en yakın eczaneyi göster</p>
+          </div>
+        </button>
+      </div>
+
+      <!-- Timeline of Medication Doses for Today -->
+      <div class="section-title">
+        <h3><i class="fa-solid fa-clock"></i> <span data-i18n="timelineTitle">Bugünkü İlaç Takvimi</span> (<span id="activePatientTag">Aktif Hasta</span>)</h3>
+        <span class="help-hint" data-i18n="timelineHint">Sesle veya butonla içildi (+) işaretleyin</span>
+      </div>
+
+      <div class="meds-timeline" id="medsTimeline">
+        <!-- JS Populated Doses -->
+      </div>
+
+      <!-- Inventory & Critical Stock Warning -->
+      <div class="section-title">
+        <h3><i class="fa-solid fa-boxes-stacked"></i> <span data-i18n="inventoryTitle">Evdeki İlaç Stokları</span></h3>
+      </div>
+
+      <div class="inventory-grid" id="inventoryGrid">
+        <!-- JS Populated Inventory -->
+      </div>
+
+      <!-- GLOBAL İLAÇ VERİTABANI VE ARAMA SİSTEMİ -->
+      <div class="global-med-catalog-wrapper">
+        <div class="section-title">
+          <h3><i class="fa-solid fa-database"></i> Dünya & Türkiye İlaç Veritabanı (Reçete & Prospektüs Kataloğu)</h3>
+          <p class="section-sub">Tüm küresel ilaçları (Tansiyon, Diyabet, Kalp, Kolesterol, Ağrı Kesici, Tiroit vb.) arayıp hastanıza ekleyin</p>
+        </div>
+
+        <div class="global-med-search-bar">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="globalMedSearchInput" placeholder="İlaç Adı veya Etken Madde Arayın (Örn: Parol, Lipitor, Nexium, Augmentin, Coumadin, Euthyrox...)" onkeyup="searchGlobalMedDatabase()">
+        </div>
+
+        <div class="global-med-results-grid" id="globalMedResultsGrid">
+          <!-- JS Populated Drug Cards -->
+        </div>
+      </div>
+
+      <!-- Eczane Entegrasyonu, Filtreleme ve 81 İl Arama Bölümü -->
+      <div class="pharmacy-section-wrapper" id="pharmacySection">
+        <div class="section-title">
+          <h3><i class="fa-solid fa-map-location-dot"></i> <span data-i18n="pharmacySectionTitle">81 İl & İlçeler Nöbetçi Eczane Arama Filtresi</span></h3>
+          <p class="section-sub" data-i18n="pharmacySectionSub">İl, ilçe, mahalle veya serbest arama yapabilirsiniz (Örn: "Ankara Mamak", "İzmir Karşıyaka", "İstanbul Beşiktaş")</p>
+        </div>
+
+        <div class="pharmacy-search-bar-wrapper">
+          <div class="search-input-group">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="pharmacySearchInput" placeholder="Serbest Arama yapın (Örn: Ankara Mamak, Kadıköy Moda, Ağrı Kesici...)" onkeyup="filterPharmacies()">
+          </div>
+        </div>
+
+        <div class="pharmacy-filter-box">
+          <div class="filter-group">
+            <label for="citySelect"><i class="fa-solid fa-city"></i> İl (81 Şehir):</label>
+            <select id="citySelect" onchange="handleLocationChange()">
+              <!-- JS Populated 81 Cities -->
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="districtSelect"><i class="fa-solid fa-location-dot"></i> İlçe:</label>
+            <select id="districtSelect" onchange="handleLocationChange()">
+              <option value="all">Tüm İlçeler</option>
+              <!-- JS Populated Districts -->
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="neighborhoodSelect"><i class="fa-solid fa-house-medical"></i> Mahalle:</label>
+            <select id="neighborhoodSelect" onchange="filterPharmacies()">
+              <option value="all">Tüm Mahalleler</option>
+              <option value="Merkez">Merkez Mah.</option>
+              <option value="Moda">Moda Mah.</option>
+              <option value="Kızılay">Kızılay Mah.</option>
+              <option value="Alsancak">Alsancak Mah.</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="medSelectFilter"><i class="fa-solid fa-pills"></i> Aranacak İlaç:</label>
+            <select id="medSelectFilter" onchange="filterPharmacies()">
+              <option value="all">Tüm İlaçlar</option>
+              <option value="Coraspin 100mg">Coraspin 100mg (Tansiyon)</option>
+              <option value="Glucophage 850mg">Glucophage 850mg (Şeker)</option>
+              <option value="Parol 500mg">Parol 500mg (Ağrı Kesici)</option>
+              <option value="Synthroid 50mcg">Synthroid 50mcg (Tiroit)</option>
+              <option value="Beloc ZOK 50mg">Beloc ZOK 50mg (Kalp)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pharmacy-cards-container" id="pharmacyList">
+          <!-- JS Populated Pharmacies -->
+        </div>
+      </div>
+
+      <!-- AI Asistanlar (Doktor AI & Hemşire AI) -->
+      <div class="ai-section-wrapper">
+        <div class="section-title">
+          <h3><i class="fa-solid fa-robot"></i> <span data-i18n="aiTitle">Sağlık Asistanlarınız (Özel AI Danışmanı)</span></h3>
+          <p class="section-sub"><strong id="aiActivePatientNameTag">Aktif Hasta</strong> için özel hastalık, ilaç ve prospektüs danışmanı.</p>
+        </div>
+
+        <div class="ai-tabs">
+          <button class="ai-tab-btn active" id="docTabBtn" onclick="switchAIPersona('doctor')">
+            <i class="fa-solid fa-user-doctor"></i> Doktor AI (Resmi Medikal Teşhis & Prospektüs)
+          </button>
+          <button class="ai-tab-btn" id="nurseTabBtn" onclick="switchAIPersona('nurse')">
+            <i class="fa-solid fa-user-nurse"></i> Hemşire AI (Sıcak Samimi Kullanım Rehberi)
+          </button>
+        </div>
+
+        <div class="ai-chat-box">
+          <div class="chat-header" id="chatHeader">
+            <div class="avatar-icon doc-avatar"><i class="fa-solid fa-user-doctor"></i></div>
+            <div>
+              <h4 id="personaTitle">Dr. AI Sağlık Danışmanı</h4>
+              <p id="personaDesc">Sadece sizin kayıtlı ilaçlarınız ve sağlık geçmişiniz üzerinden tavsiye verir</p>
+            </div>
+          </div>
+
+          <div class="chat-messages" id="chatMessages">
+            <div class="message system-msg">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span data-i18n="aiDisclaimer">Yapay zeka asistanları bilgilendirme amaçlıdır. Acil durumlarda lütfen 112'yi arayınız veya yakındaki hastaneye başvurunuz.</span>
+            </div>
+            <div class="message ai-msg">
+              <div class="msg-content" id="aiWelcomeMsg">
+                Merhaba! Ben Doktor AI. İlaçlarınız, yan etkileri veya sağlığınızla ilgili merak ettiğiniz her şeyi sesle veya yazarak sorabilirsiniz.
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-bar">
+            <input type="text" id="chatInput" placeholder="Örn: İlacımı aç karnına içebilir miyim?" onkeypress="handleChatKeyPress(event)">
+            <button class="btn-voice-chat" onclick="startVoiceChatInput()" title="Sesli Soru Sor">
+              <i class="fa-solid fa-microphone"></i>
+            </button>
+            <button class="btn-send" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i> <span data-i18n="sendBtnText">Gönder</span></button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ==================== REFAKATÇİ / AİLE PANELDİR (TAM SENKRONİZE) ==================== -->
+    <section id="familyView" class="view-section">
+      <div class="family-header-card">
+        <div>
+          <h2><i class="fa-solid fa-heart"></i> Refakatçi Takip Paneli (Canlı Senkronize)</h2>
+          <p>Kayıtlı Refakatçiler: <strong id="familyCaregiversListStr">Yükleniyor...</strong></p>
+          <p>İzlenen Hastalar: <strong id="familyActivePatientsStr">Yükleniyor...</strong></p>
+        </div>
+        <div class="escalation-status">
+          <span class="badge-safe"><i class="fa-solid fa-shield-heart"></i> Güvenlik Durumu: İlaç Takibi Normal</span>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon icon-blue"><i class="fa-solid fa-chart-line"></i></div>
+          <div class="stat-data">
+            <span class="stat-val" id="familyAdherenceVal">95%</span>
+            <span class="stat-lbl">Ortalama İlaç İçme Uyum Oranı</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-green"><i class="fa-solid fa-users"></i></div>
+          <div class="stat-data">
+            <span class="stat-val" id="familyPatientCountVal">0 Hasta</span>
+            <span class="stat-lbl">Kayıtlı Yaşlı Birey Sayısı</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-orange"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          <div class="stat-data">
+            <span class="stat-val" id="familyAlertCount">0</span>
+            <span class="stat-lbl">Kritik Stok Uyarı Sayısı</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Dynamic Patient Cards in Refakatçi View -->
+      <div class="section-title">
+        <h3><i class="fa-solid fa-user-nurse"></i> Kayıtlı Hastaların Canlı Takip Kartları</h3>
+      </div>
+      <div class="family-patients-grid" id="familyPatientsGrid">
+        <!-- Dynamic Patient Cards -->
+      </div>
+
+      <!-- Adherence Analytics Chart -->
+      <div class="analytics-wrapper">
+        <div class="chart-box">
+          <h3><i class="fa-solid fa-chart-bar"></i> Kayıtlı Hastaların Son 7 Günlük Doz Takip Analizi</h3>
+          <canvas id="adherenceChart" height="220"></canvas>
+        </div>
+
+        <div class="log-box">
+          <h3><i class="fa-solid fa-bell"></i> Refakatçi SMS & ESP32 Doğrulama Logları</h3>
+          <ul class="activity-log-list" id="activityLogList">
+            <!-- JS Populated logs -->
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- ==================== AUTH / E-DEVLET & 2FA MODAL ==================== -->
+  <div id="authModal" class="modal-overlay">
+    <div class="modal-card auth-modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-shield-halved"></i> Oturum Aç / E-Devlet & 2FA</h3>
+        <button class="close-btn" onclick="closeAuthModal()">&times;</button>
+      </div>
+
+      <div class="auth-tabs">
+        <button id="tabTcLoginBtn" class="auth-tab-btn active" onclick="switchAuthTab('tc')">
+          <i class="fa-solid fa-id-card"></i> T.C. Kimlik İle Giriş
+        </button>
+        <button id="tabEDevletBtn" class="auth-tab-btn" onclick="switchAuthTab('edevlet')">
+          <i class="fa-solid fa-landmark"></i> E-Devlet Kapısı
+        </button>
+      </div>
+
+      <!-- T.C. Kimlik Login Section -->
+      <div id="authTcSection" class="auth-section active">
+        <div class="form-group">
+          <label><i class="fa-solid fa-id-card"></i> T.C. Kimlik Numarası (11 Hane):</label>
+          <input type="text" id="loginTcInput" placeholder="Örn: 12345678901" maxlength="11">
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-lock"></i> Güvenlik Şifresi / E-Reçete PIN:</label>
+          <input type="password" id="loginPasswordInput" placeholder="••••">
+        </div>
+
+        <button class="btn-primary-block" onclick="processTcLogin()">
+          <i class="fa-solid fa-right-to-bracket"></i> T.C. Kimlik İle Oturum Aç
+        </button>
+      </div>
+
+      <!-- E-Devlet Login Section -->
+      <div id="authEDevletSection" class="auth-section hidden">
+        <div class="edevlet-box">
+          <i class="fa-solid fa-landmark edevlet-icon"></i>
+          <h4>turkiye.gov.tr E-Devlet Kapısı Entegrasyonu</h4>
+          <p>T.C. Sağlık Bakanlığı E-Nabız ve E-Reçete verileriniz otomatik senkronize edilir.</p>
+          <button class="btn-edevlet" onclick="simulateEDevletLogin()">
+            <i class="fa-solid fa-shield-check"></i> E-Devlet İle Güvenli Giriş Yap
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ==================== AYARLAR & PROFİL YÖNETİMİ MODAL ==================== -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-card settings-modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-gear"></i> Sistem, Profil & 2FA Ayarları</h3>
+        <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
+      </div>
+
+      <div class="settings-tabs">
+        <button id="setTabProfilesBtn" class="settings-tab-btn active" onclick="switchSettingsTab('profiles')">
+          <i class="fa-solid fa-users"></i> Hasta Profilleri (Sınırsız)
+        </button>
+        <button id="setTabCaregiversBtn" class="settings-tab-btn" onclick="switchSettingsTab('caregivers')">
+          <i class="fa-solid fa-user-nurse"></i> Refakatçiler (Max 2)
+        </button>
+        <button id="setTabAudioBtn" class="settings-tab-btn" onclick="switchSettingsTab('audio')">
+          <i class="fa-solid fa-sliders"></i> Ses & Telaffuz
+        </button>
+        <button id="setTabSecurityBtn" class="settings-tab-btn" onclick="switchSettingsTab('security')">
+          <i class="fa-solid fa-shield-cat"></i> 2FA Güvenlik
+        </button>
+      </div>
+
+      <!-- Tab 1: Profiles Management & Creation -->
+      <div id="settingsProfilesSection" class="settings-section active">
+        <div class="section-title">
+          <h4><i class="fa-solid fa-user-plus"></i> Yeni Yaşlı Hasta Profili Ekle</h4>
+        </div>
+
+        <form id="createPatientForm" onsubmit="handleCreatePatientSubmit(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label><i class="fa-solid fa-user"></i> Hasta Adı Soyadı:*</label>
+              <input type="text" id="newPatName" placeholder="Örn: Hasan Yılmaz" required>
+            </div>
+
+            <div class="form-group">
+              <label><i class="fa-solid fa-venus-mars"></i> Cinsiyet:*</label>
+              <select id="newPatGender" required>
+                <option value="Erkek">Erkek (Erkek Sesi İle Seslendirilir)</option>
+                <option value="Kadın">Kadın (Kadın Sesi İle Seslendirilir)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label><i class="fa-solid fa-calendar"></i> Yaş:*</label>
+              <input type="number" id="newPatAge" placeholder="Örn: 76" min="40" max="110" required>
+            </div>
+
+            <div class="form-group">
+              <label><i class="fa-solid fa-hands-holding-child"></i> Yakınlık / Rol:*</label>
+              <input type="text" id="newPatRelation" placeholder="Örn: Dede, Amca, Anne" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label><i class="fa-solid fa-pills"></i> İlaç Adı ve Kullanımı:*</label>
+            <input type="text" id="newPatMed" placeholder="Örn: Coraspin 100mg - Sabah Tok" required>
+          </div>
+
+          <div class="form-group">
+            <label><i class="fa-solid fa-notes-medical"></i> Kronik Rahatsızlıklar:</label>
+            <input type="text" id="newPatIllness" placeholder="Örn: Hipertansiyon, Tip-2 Diyabet">
+          </div>
+
+          <button type="submit" class="btn-primary-block btn-success-bg">
+            <i class="fa-solid fa-plus"></i> Hastayı Sisteme Kaydet
+          </button>
+        </form>
+
+        <div class="existing-profiles-list">
+          <h4><i class="fa-solid fa-list-check"></i> Kayıtlı Yaşlı Hastalar:</h4>
+          <ul id="registeredPatientsListView">
+            <!-- JS populated -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- Tab 2: Caregivers Management (Max 2 Limit) -->
+      <div id="settingsCaregiversSection" class="settings-section hidden">
+        <div class="section-title">
+          <h4><i class="fa-solid fa-user-shield"></i> Refakatçi & Aile Yakınları (Maksimum 2 Refakatçi)</h4>
+        </div>
+
+        <form id="createCaregiverForm" onsubmit="handleCreateCaregiverSubmit(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label><i class="fa-solid fa-user-nurse"></i> Refakatçi Adı Soyadı:*</label>
+              <input type="text" id="newCareName" placeholder="Örn: Mehmet Yılmaz" required>
+            </div>
+
+            <div class="form-group">
+              <label><i class="fa-solid fa-phone"></i> SMS Uyarı Telefonu:*</label>
+              <input type="text" id="newCarePhone" placeholder="Örn: 0532 999 88 77" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label><i class="fa-solid fa-heart"></i> Yakınlık Derecesi:*</label>
+            <input type="text" id="newCareRelation" placeholder="Örn: Oğul, Hemşire, Bakıcı" required>
+          </div>
+
+          <button type="submit" class="btn-primary-block">
+            <i class="fa-solid fa-shield"></i> Refakatçiyi Ekle
+          </button>
+        </form>
+
+        <div class="existing-profiles-list">
+          <h4><i class="fa-solid fa-users"></i> Kayıtlı Refakatçiler (Max 2):</h4>
+          <ul id="registeredCaregiversListView">
+            <!-- JS populated -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- Tab 3: Sound & Pronunciation Options -->
+      <div id="settingsAudioSection" class="settings-section hidden">
+        <div class="section-title">
+          <h4><i class="fa-solid fa-volume-high"></i> Seslendirme ve Okunuş Ayarları</h4>
+        </div>
+
+        <div class="form-group">
+          <label><i class="fa-solid fa-volume-xmark"></i> Ses Durumu:</label>
+          <button id="settingsMuteToggleBtn" class="btn-primary-block" onclick="toggleAudioMute()">
+            <i class="fa-solid fa-volume-high"></i> Seslendirme Aktif (Kapatmak İçin Tıklayın)
+          </button>
+        </div>
+
+        <button class="btn-primary-block" onclick="testVoiceSynthesis()">
+          <i class="fa-solid fa-play"></i> Örnek Seslendiriciyi Test Et
+        </button>
+
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+        <button class="btn-primary-block btn-danger-confirm" onclick="resetAppData()">
+          <i class="fa-solid fa-rotate-left"></i> Tüm Verileri Sıfırla (Fabrika Ayarları)
+        </button>
+      </div>
+
+      <!-- Tab 4: 2FA & Security -->
+      <div id="settingsSecuritySection" class="settings-section hidden">
+        <div class="section-title">
+          <h4><i class="fa-solid fa-shield-cat"></i> İki Adımlı Doğrulama (2FA Güvenlik)</h4>
+        </div>
+
+        <div class="form-group">
+          <label>SMS / OTP İki Adımlı Doğrulama:</label>
+          <button id="toggle2faBtn" class="btn-primary-block" onclick="toggle2FA()">
+            <i class="fa-solid fa-lock"></i> 2FA Aktif Et
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- Vitals Modal (Tansiyon & Şeker Değerleri Takip Günlüğü) -->
+  <div id="vitalsModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-heart-pulse"></i> Tansiyon & Şeker Takip Günlüğü</h3>
+        <button class="close-btn" onclick="closeVitalsModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form onsubmit="handleSaveVitals(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Büyük Tansiyon (SYS):</label>
+              <input type="number" id="vitalsSys" placeholder="Örn: 120" required>
+            </div>
+            <div class="form-group">
+              <label>Küçük Tansiyon (DIA):</label>
+              <input type="number" id="vitalsDia" placeholder="Örn: 80" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Açlık Kan Şekeri (mg/dL):</label>
+            <input type="number" id="vitalsSugar" placeholder="Örn: 110">
+          </div>
+
+          <button type="submit" class="btn-primary-block btn-success-bg">
+            <i class="fa-solid fa-check"></i> Ölçümü Kaydet ve Doktor AI'ya İlet
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ESP32 Camera / OCR & Pill Color-Shape Verification Modal -->
+  <div id="esp32Modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-microchip"></i> ESP32-CAM Akıllı Sensör & Kamera</h3>
+        <button class="close-btn" onclick="closeESP32Modal()">&times;</button>
+      </div>
+
+      <div class="esp32-mode-selector">
+        <button id="ocrModeBtn" class="esp32-mode-btn active" onclick="switchESP32Mode('ocr')">
+          <i class="fa-solid fa-box-open"></i> 1. Kutu & Reçete Tarama (OCR)
+        </button>
+        <button id="pillModeBtn" class="esp32-mode-btn" onclick="switchESP32Mode('pill')">
+          <i class="fa-solid fa-eye"></i> 2. Hap Rengi & Şekli Doğrulama
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-desc" id="esp32DescText">Yaşlı hastalarımızın el yazması veya küçük yazıları yazmasına gerek yok! ESP32 Akıllı Kamera Kutusu reçeteyi otomatik algılar.</p>
+
+        <div class="esp32-viewfinder">
+          <div class="camera-stream" id="cameraStream">
+            <i class="fa-solid fa-box-open box-placeholder" id="esp32IconPlaceholder"></i>
+            <span id="scanStatusText">Kutu veya Hapı Kameraya Doğrultun</span>
+            <div class="scan-laser"></div>
+          </div>
+        </div>
+
+        <!-- OCR Sample Buttons -->
+        <div id="ocrSamplesGroup" class="sample-scans">
+          <p><strong>Örnek Kutularla Otomatik Taramayı Deneyin:</strong></p>
+          <div class="sample-btn-group">
+            <button onclick="simulateScan('Coraspin 100mg', 'Tansiyon / Kan Sulandırıcı', '30 Tablet', 'Sabah 1 Tok')">
+              <i class="fa-solid fa-pills"></i> Coraspin 100mg
+            </button>
+            <button onclick="simulateScan('Glucophage 850mg', 'Diyabet / Şeker', '60 Tablet', 'Sabah 1, Akşam 1 Tok')">
+              <i class="fa-solid fa-prescription-bottle"></i> Glucophage 850mg
+            </button>
+            <button onclick="simulateScan('Beloc ZOK 50mg', 'Kalp Ritim Düzenleyici', '28 Tablet', 'Sabah 1 Aç')">
+              <i class="fa-solid fa-capsules"></i> Beloc ZOK 50mg
+            </button>
+          </div>
+        </div>
+
+        <!-- Pill Shape & Color Verification Samples -->
+        <div id="pillSamplesGroup" class="sample-scans hidden">
+          <p><strong>Avuç İçi Hap Görseli Seçip Doğrulayın:</strong></p>
+          <div class="sample-btn-group">
+            <button onclick="verifyPillScan('Beyaz', 'Yuvarlak Tablet', 'Coraspin 100mg', true)">
+              ⚪ Beyaz Yuvarlak Hap (Coraspin)
+            </button>
+            <button onclick="verifyPillScan('Kırmızı', 'Oval Kapsül', 'Glucophage 850mg', true)">
+              🔴 Kırmızı Oval Kapsül (Glucophage)
+            </button>
+            <button class="btn-danger-sample" onclick="verifyPillScan('Sarı', 'Küçük Oval Tablet', 'Yanlış Ağrı Kesici', false)">
+              🟡 YANLIŞ HAP TESTİ (Sarı Oval)
+            </button>
+          </div>
+        </div>
+
+        <!-- Scan Result Preview -->
+        <div id="scanResultContainer" class="scan-result-card hidden">
+          <h4><i class="fa-solid fa-wand-magic-sparkles"></i> AI Algılanan Sonuç:</h4>
+          <div class="scanned-info" id="scannedInfoContent">
+            <!-- JS populated -->
+          </div>
+          <button id="btnConfirmESP32" class="btn-confirm-add" onclick="confirmESP32Action()"><i class="fa-solid fa-plus"></i> Onayla & Sisteme İşle</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>CareMed AI - TÜBİTAK / TEKNOFEST / Portföy Proje Prototipi &copy; 2026 | Global İlaç Kataloğu & 81 Şehir & Canlı Senkronize Refakatçi Paneli</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
